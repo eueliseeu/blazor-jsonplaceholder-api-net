@@ -1,0 +1,76 @@
+﻿@page "/"
+@using BlazorUsersJsonPlaceHolderApi.Models
+@inject BlazorUsersJsonPlaceHolderApi.Services.UserService UserService
+@inject IJSRuntime JS
+
+<PageTitle>Usuários da API</PageTitle>
+
+<h1>Usuários da API</h1>
+
+@if (isLoading)
+{
+  <p role="status">Carregando usuário...</p>
+}
+else if (errorMessage is not null)
+{
+  <p role="alert">@errorMessage</p>
+}
+else if (users.Count > 0)
+{
+  <label for="user-select" class="form-label">Selecione um usuário</label>
+  <select id="user-select" class="form-select mb-4" @bind="selectedUserId">
+    @foreach (var user in users)
+    {
+      <option value="@user.Id">@user.Name</option>
+    }
+  </select>
+
+  @if (selectedUser is not null)
+  {
+    <dl>
+      <dt>Nome</dt>
+      <dd>@selectedUser.Name</dd>
+      <dt>Cidade</dt>
+      <dd>@selectedUser.Address.City</dd>
+      <dt>Empresa</dt>
+      <dd>@selectedUser.Company.Name</dd>
+    </dl>
+  }
+}
+else
+{
+  <p>Nenhum usuário foi retornado pela API.</p>
+}
+
+@code {
+  private IReadOnlyList<User> users = [];
+  private int? selectedUserId;
+  private string? errorMessage;
+  private bool isLoading = true;
+  private User? selectedUser => users.FirstOrDefault(user => user.Id == selectedUserId);
+
+  protected override async Task OnInitializedAsync()
+  {
+    try
+    {
+      users = await UserService.GetUsersAsync();
+      selectedUserId = users.FirstOrDefault()?.Id;
+
+      var firstUser = users.FirstOrDefault();
+      if (firstUser is not null)
+      {
+        var consoleOutput = $"Nome: {firstUser.Name}\nCidade: {firstUser.Address.City}\nEmpresa: {firstUser.Company.Name}";
+        await JS.InvokeVoidAsync("console.log", consoleOutput);
+        
+      }
+    }
+    catch (HttpRequestException)
+    {
+      errorMessage = "Não foi possível carregar os usuários. Verifique sua conexão e tente novamente.";
+    }
+    finally
+    {
+      isLoading = false;
+    }
+  }
+}
